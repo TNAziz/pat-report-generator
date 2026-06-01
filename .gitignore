@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+.env
+.DS_Store
+Thumbs.db
+# Local cache directory if user overrides PAT_DATA_DIR into the project
+data_cache/
+# Leftover from app.py -> Home.py rename; OneDrive wouldn't let us delete it locally.
+_app.py.bak

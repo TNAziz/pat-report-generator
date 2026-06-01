@@ -1,0 +1,4 @@
+program,semester,total_courses,assessed_courses,missing_courses,pct_assessed,pct_missing
+CE,Spring 2025,6,5,1,83.33333333333334,16.666666666666664
+CON,Spring 2025,3,2,1,66.66666666666666,33.33333333333333
+ENE,Spring 2025,3,1,2,33.33333333333333,66.66666666666666

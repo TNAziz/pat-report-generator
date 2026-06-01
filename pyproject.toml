@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pat-report-generator"
+version = "0.1.0a0"
+description = "Streamlit application for generating ABET reports from NC State PAT raw exports."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Tarek Aziz", email = "tnaziz@ncsu.edu" }]
+license = { text = "MIT" }
+dependencies = [
+    "streamlit>=1.30",
+    "pandas>=2.0",
+    "openpyxl>=3.1",
+    "python-docx>=1.1",
+    "weasyprint>=60",
+    "markdown>=3.5",
+    "platformdirs>=4.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "pytest-cov>=4.1"]
+
+[tool.setuptools.packages.find]
+include = ["pat*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# -ra: show summary of skipped/xfailed; -p no:cacheprovider: avoid writing
+# .pytest_cache on slow/network-backed filesystems (e.g. OneDrive).
+addopts = "-ra -p no:cacheprovider"
