@@ -57,10 +57,19 @@ def _planned_cell_status(val) -> str:
 
 
 def _actual_for(df, course: str, sem_label: str) -> str:
-    """Return 'completed' / 'missing' / '' for the (course, semester) pair."""
-    if df.empty:
+    """Return 'completed' / 'missing' / '' for the (course, semester) pair.
+
+    ``course`` is the raw cell text from the Assessment Schedule workbook
+    ("CE282", "CE-282", "ce 282", ...). We canonicalize both sides to
+    ``course_key`` so the workbook's typographic choice never causes a
+    false 'missing'.
+    """
+    if df.empty or "course_key" not in df.columns:
         return ""
-    rows = df[(df["course"].astype(str).str.strip() == course)
+    key = N.course_key(course)
+    if not key:
+        return ""
+    rows = df[(df["course_key"] == key)
               & (df["semester"].astype(str).str.strip() == sem_label)]
     if rows.empty:
         return ""
