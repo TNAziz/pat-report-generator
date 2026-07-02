@@ -202,18 +202,19 @@ def render_sidebar() -> None:
 
 
 @st.cache_data(show_spinner=False)
-def get_combined_cached(_cache_signature: str):
+def get_combined_cached(sig: str):
     """Return the canonical combined DataFrame.
 
-    The ``_cache_signature`` argument is just a hash of the manifest --
-    Streamlit invalidates the cache when it changes (i.e., when uploads
-    happen).
+    ``sig`` is a manifest-derived hash; Streamlit uses it as the cache
+    key so a new upload (which changes the manifest) invalidates the
+    cached frame. Argument name must NOT start with an underscore —
+    Streamlit excludes underscore-prefixed args from the cache key.
     """
     return data.get_combined()
 
 
 @st.cache_data(show_spinner=False)
-def get_schedule_cached(_cache_signature: str):
+def get_schedule_cached(sig: str):
     return data.load_schedule()
 
 
