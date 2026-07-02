@@ -178,3 +178,53 @@ def test_read_assessment_schedule_planned_none_when_absent():
     """Workbook without the planned sheet still loads fine; planned is None."""
     sched = ingest.read_assessment_schedule(FIXTURES / "assessment_schedule_TierA.xlsx")
     assert sched.planned is None
+
+
+# -------- ingest-cluster regression tests --------
+
+
+def test_read_pat_csv_strips_utf8_bom():
+    """Excel 'Save As CSV UTF-8' prepends a BOM; the first column must still match."""
+    raw = (FIXTURES / "summaryReportCE_TierA.csv").read_bytes()
+    bom_bytes = b"\xef\xbb\xbf" + raw
+    df = ingest.read_pat_csv(
+        bom_bytes, program="CE", filename="summaryReportCE_TierA.csv"
+    )
+    assert not df.empty
+    assert "course" in df.columns
+
+
+def test_read_assessment_schedule_tolerates_trailing_space_headers(tmp_path):
+    """A trailing space on 'Outcomes ' shouldn't crash the required-column check."""
+    path = tmp_path / "trailing_space.xlsx"
+    with pd.ExcelWriter(path, engine="openpyxl") as xw:
+        pd.DataFrame({"Course": ["CE 214"], "Programs": ["CE"], "1.1": ["X"]}).to_excel(
+            xw, sheet_name="CourseSubOutcomes", index=False
+        )
+        pd.DataFrame({"Outcomes ": ["1.1"], "Description": ["desc"]}).to_excel(
+            xw, sheet_name="OutcomeDescriptions", index=False
+        )
+    sched = ingest.read_assessment_schedule(path)
+    assert sched.descriptions.get("1.1") == "desc"
+
+
+def test_lookup_unions_cross_listed_rows(tmp_path):
+    """A course listed on two rows must expose both rows' programs and checkmarks."""
+    path = tmp_path / "cross_listed.xlsx"
+    with pd.ExcelWriter(path, engine="openpyxl") as xw:
+        pd.DataFrame({
+            "Course":   ["CE 488", "CE 488"],
+            "Programs": ["CE",     "ENE"],
+            "1.1":      ["X",      None],
+            "2.1":      [None,     "X"],
+            "3.2":      ["X",      "X"],
+        }).to_excel(xw, sheet_name="CourseSubOutcomes", index=False)
+        pd.DataFrame({
+            "Outcomes": ["1.1", "2.1", "3.2"],
+            "Description": ["d1", "d2", "d3"],
+        }).to_excel(xw, sheet_name="OutcomeDescriptions", index=False)
+    sched = ingest.read_assessment_schedule(path)
+    result = sched.lookup("CE 488")
+    assert result is not None
+    assert sorted(result["programs"]) == ["CE", "ENE"]
+    assert sorted(c for c, _ in result["suboutcomes"]) == ["1.1", "2.1", "3.2"]

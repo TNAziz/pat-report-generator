@@ -106,7 +106,13 @@ def read_pat_csv(source, *, program=None, filename=None):
     try:
         # dtype=str + keep_default_na=False prevents pandas from coercing
         # "null" or "nan" string sentinels into NaN before normalization.
-        df = pd.read_csv(handle, dtype=str, keep_default_na=False, na_filter=False)
+        # encoding='utf-8-sig' strips the UTF-8 BOM that Excel prepends when
+        # you Save As CSV UTF-8 — without it the first column name reads as
+        # "﻿<name>" and rename_to_canonical can't match it.
+        df = pd.read_csv(
+            handle, dtype=str, keep_default_na=False, na_filter=False,
+            encoding="utf-8-sig",
+        )
     finally:
         if isinstance(source, (str, Path)):
             handle.close()
@@ -216,17 +222,26 @@ class SubOutcomeSchedule:
         ]
         if matches.empty:
             return None
-        row = matches.iloc[0]
-        progs = _split_programs(row.get("Programs"))
-        codes = []
-        for c in self.suboutcome_columns:
-            if _is_checked(row[c]):
-                codes.append(str(c).strip())
+        # Cross-listed courses appear on multiple rows (once per program
+        # section). Union the programs and checked sub-outcomes so no row's
+        # checkmarks are silently dropped by taking only iloc[0].
+        progs: list[str] = []
+        codes: list[str] = []
+        course_display = str(matches.iloc[0]["Course"]).strip()
+        for _, row in matches.iterrows():
+            for p in _split_programs(row.get("Programs")):
+                if p not in progs:
+                    progs.append(p)
+            for c in self.suboutcome_columns:
+                if _is_checked(row[c]):
+                    sc = str(c).strip()
+                    if sc not in codes:
+                        codes.append(sc)
         codes_with_desc = [
             (c, self.descriptions.get(c, "")) for c in _sort_outcome_codes(codes)
         ]
         return {
-            "course": str(row["Course"]).strip(),
+            "course": course_display,
             "programs": progs,
             "suboutcomes": codes_with_desc,
         }
@@ -279,8 +294,18 @@ def read_assessment_schedule(source):
             + str(missing) + ". Found sheets: " + str(xls.sheet_names)
         )
 
-    courses = pd.read_excel(xls, sheet_name=SCHEDULE_COURSE_SHEET)
-    desc_df = pd.read_excel(xls, sheet_name=SCHEDULE_DESC_SHEET)
+    # dtype=str keeps data cells as strings so a course code stored as a
+    # number ("214" cell → 214.0 float) stays "214". This does NOT affect
+    # header inference: if a column HEADER cell (e.g., sub-outcome "1.10")
+    # is stored as a number in Excel, pandas still infers it as float. To
+    # preserve the ".10", type the header as text in Excel or prefix with '.
+    courses = pd.read_excel(xls, sheet_name=SCHEDULE_COURSE_SHEET, dtype=str)
+    desc_df = pd.read_excel(xls, sheet_name=SCHEDULE_DESC_SHEET, dtype=str)
+
+    # Strip header whitespace up front so "Outcomes " (trailing space) still
+    # counts as "Outcomes" for the required-column check.
+    courses.columns = [_normalize_col_name(c) for c in courses.columns]
+    desc_df.columns = [_normalize_col_name(c) for c in desc_df.columns]
 
     for col in ("Course", "Programs"):
         if col not in courses.columns:
@@ -294,8 +319,6 @@ def read_assessment_schedule(source):
                 "Sheet '" + SCHEDULE_DESC_SHEET + "' missing column '"
                 + col + "'. Found: " + str(list(desc_df.columns))
             )
-
-    courses.columns = [_normalize_col_name(c) for c in courses.columns]
 
     descriptions = {}
     for _, row in desc_df.iterrows():
