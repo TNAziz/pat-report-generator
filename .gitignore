@@ -15,3 +15,5 @@ data_cache/
 _app.py.bak
 # Real PAT export CSVs — input data, not source.
 PAT DATA/
+# Session-to-session handoff notes; local scratch only.
+HANDOFF.md
