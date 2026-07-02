@@ -13,3 +13,5 @@ Thumbs.db
 data_cache/
 # Leftover from app.py -> Home.py rename; OneDrive wouldn't let us delete it locally.
 _app.py.bak
+# Real PAT export CSVs — input data, not source.
+PAT DATA/
