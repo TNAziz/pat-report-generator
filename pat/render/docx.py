@@ -31,6 +31,18 @@ from .model import (
 
 _RED = RGBColor(0xA0, 0x00, 0x00)
 
+# XML 1.0 forbids most C0 control characters. Comments pasted from PDFs
+# or older Word documents sometimes contain NUL, VT, or FF — save() then
+# raises deep inside python-docx. Tab (\t), LF (\n), and CR (\r) stay in.
+_XML_ILLEGAL_CTRL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def _safe_text(s) -> str:
+    """Strip XML-illegal control chars so python-docx's save() can't crash on them."""
+    if s is None:
+        return ""
+    return _XML_ILLEGAL_CTRL.sub("", str(s))
+
 
 def _add_percent_run(paragraph, val, below_threshold: bool = False):
     """Append a percent cell to a paragraph, bolded + red if below threshold."""
@@ -75,7 +87,7 @@ def _add_measure(doc, m):
 
     p = doc.add_paragraph()
     p.add_run("Measure Description: ").bold = True
-    p.add_run(m.measure_description or "N/A")
+    p.add_run(_safe_text(m.measure_description) or "N/A")
 
     p = doc.add_paragraph()
     p.add_run("Performance Threshold: ").bold = True
@@ -91,10 +103,10 @@ def _add_measure(doc, m):
 
     quote = doc.add_paragraph(style="Intense Quote")
     quote.add_run("Comments: ").bold = True
-    quote.add_run(m.comments)
+    quote.add_run(_safe_text(m.comments))
     quote.add_run("\n")
     quote.add_run("Actions Taken: ").bold = True
-    quote.add_run(m.actions_taken)
+    quote.add_run(_safe_text(m.actions_taken))
 
 
 def _add_semester_section(doc, section: SemesterSection):
@@ -127,7 +139,7 @@ def _add_named_table(doc, t: NamedTable):
     for row in t.rows:
         cells = table.add_row().cells
         for i, val in enumerate(row):
-            cells[i].text = str(val)
+            cells[i].text = _safe_text(val)
     if t.footnote:
         p = doc.add_paragraph()
         run = p.add_run(t.footnote)

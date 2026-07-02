@@ -118,3 +118,70 @@ def test_render_empty_report():
     r = Report(title="Empty")
     out = M.render(r)
     assert out.strip() == "# Empty"
+
+
+# -------- escape helpers --------
+
+
+def test_md_cell_escapes_pipe_and_newline():
+    assert M._md_cell("a | b") == "a \\| b"
+    assert M._md_cell("line1\nline2") == "line1<br>line2"
+    assert M._md_cell("line1\r\nline2") == "line1<br>line2"
+    assert M._md_cell(None) == ""
+
+
+def test_md_blockquote_keeps_wrapped_lines_inside_quote():
+    lines = M._md_blockquote_field("Comments", "first\nsecond\nthird")
+    assert lines == [
+        "> **Comments:** first",
+        "> second",
+        "> third",
+    ]
+
+
+def test_named_table_row_with_pipe_stays_a_table():
+    tbl = NamedTable(
+        title=None,
+        columns=["A", "B"],
+        rows=[["a | pipe", "b\nnewline"]],
+        footnote=None,
+    )
+    out = M._render_named_table(tbl)
+    # The literal pipe is escaped so column count stays 2.
+    assert "a \\| pipe" in out
+    # The newline becomes <br> so the row doesn't spill into a new row.
+    assert "b<br>newline" in out
+
+
+def test_measure_comments_with_newline_stay_inside_blockquote():
+    r = Report(
+        title="X",
+        sections=[
+            ProgramSection(
+                program_code="CE",
+                program_label="Civil Engineering",
+                summary=[],
+                semesters=[
+                    SemesterSection(
+                        semester="Fall 2024",
+                        instructor="Aziz, Tarek",
+                        measures=[
+                            MeasureDetail(
+                                suboutcome="1.1",
+                                measure_description="Q1",
+                                performance_indicator=70,
+                                performance=80,
+                                below_threshold=False,
+                                n=10,
+                                comments="line one\nline two",
+                                actions_taken="ok",
+                            )
+                        ],
+                    )
+                ],
+            )
+        ],
+    )
+    out = M.render(r)
+    assert "> **Comments:** line one" in out
+    assert "> line two" in out

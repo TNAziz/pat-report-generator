@@ -36,6 +36,42 @@ def _bold(s: str) -> str:
     return f"**{s}**"
 
 
+def _md_cell(v) -> str:
+    """Escape a value for use inside a Markdown table cell.
+
+    A literal ``|`` breaks the column count; a newline breaks the row.
+    We escape the pipe and swap newlines for ``<br>`` so multi-line
+    cell content stays inside its own cell.
+    """
+    if v is None:
+        return ""
+    s = str(v)
+    return (
+        s.replace("\\", "\\\\")
+         .replace("|", "\\|")
+         .replace("\r\n", "<br>")
+         .replace("\n", "<br>")
+         .replace("\r", "<br>")
+    )
+
+
+def _md_blockquote_field(label: str, text) -> list[str]:
+    """Return `> **Label:** text` lines that keep every newline inside the quote.
+
+    A blockquote in Markdown ends at the first non-``>``-prefixed line,
+    so a raw newline in ``text`` silently kicks the continuation out of
+    the quote block. Prefix every wrapped line with ``> `` instead.
+    """
+    s = "" if text is None else str(text)
+    if not s:
+        return [f"> **{label}:** "]
+    parts = s.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    out = [f"> **{label}:** {parts[0]}"]
+    for p in parts[1:]:
+        out.append(f"> {p}")
+    return out
+
+
 def _render_summary_table(rows) -> str:
     """Render the per-semester / per-sub-outcome summary table."""
     if not rows:
@@ -74,9 +110,9 @@ def _render_semester_section(section: SemesterSection) -> str:
         lines.append(f"**Student Performance:** {perf_str}")
         lines.append("")
         lines.append(f"**n =** {n_str}")
-        lines.append(f"> **Comments:** {m.comments}")
+        lines.extend(_md_blockquote_field("Comments", m.comments))
         lines.append(">")
-        lines.append(f"> **Actions Taken:** {m.actions_taken}")
+        lines.extend(_md_blockquote_field("Actions Taken", m.actions_taken))
         lines.append(">")
         lines.append("---")
         lines.append("")
@@ -101,7 +137,7 @@ def _render_named_table(t: NamedTable) -> str:
         lines.append("| " + " | ".join(t.columns) + " |")
         lines.append("|" + "|".join(["---"] * len(t.columns)) + "|")
         for row in t.rows:
-            lines.append("| " + " | ".join(str(c) for c in row) + " |")
+            lines.append("| " + " | ".join(_md_cell(c) for c in row) + " |")
         lines.append("")
     if t.footnote:
         lines.append(f"_{t.footnote}_")

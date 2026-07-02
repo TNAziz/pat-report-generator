@@ -7,7 +7,9 @@ import io
 from docx import Document
 
 from pat.render import docx as D
-from pat.render.model import Report
+from pat.render.model import (
+    MeasureDetail, NamedTable, ProgramSection, Report, SemesterSection,
+)
 from tests.report_fixtures import (
     make_course_report, make_suboutcome_lookup, make_coverage_report,
 )
@@ -79,3 +81,61 @@ def test_render_empty_report_does_not_crash():
     blob = D.render(Report(title="Empty"))
     doc = _open(blob)
     assert any("Empty" in p.text for p in doc.paragraphs)
+
+
+# -------- control-char sanitization --------
+
+
+def _report_with_comment(text: str) -> Report:
+    return Report(
+        title="Ctrl-char probe",
+        sections=[
+            ProgramSection(
+                program_code="CE",
+                program_label="Civil Engineering",
+                summary=[],
+                semesters=[
+                    SemesterSection(
+                        semester="Fall 2024",
+                        instructor="Aziz, Tarek",
+                        measures=[
+                            MeasureDetail(
+                                suboutcome="1.1",
+                                measure_description="Q1",
+                                performance_indicator=70,
+                                performance=80,
+                                n=10,
+                                comments=text,
+                                actions_taken="ok",
+                            )
+                        ],
+                    )
+                ],
+            )
+        ],
+    )
+
+
+def test_render_survives_nul_and_vt_in_comments():
+    """A comment pasted from a PDF or older Word doc can contain \\x00 / \\x0b /
+    \\x0c; python-docx's save() raises deep inside if we let those through.
+    """
+    blob = D.render(_report_with_comment("bad \x00 chars \x0b here \x0c end"))
+    assert blob[:2] == b"PK"
+    doc = _open(blob)
+    text = "\n".join(p.text for c in [cell for tbl in doc.tables for row in tbl.rows for cell in row.cells] for p in c.paragraphs) + \
+        "\n".join(p.text for p in doc.paragraphs)
+    assert "bad  chars  here  end" in text
+
+
+def test_named_table_cell_control_chars_are_stripped():
+    tbl = NamedTable(
+        title="T",
+        columns=["A"],
+        rows=[["x\x00y"]],
+        footnote=None,
+    )
+    blob = D.render(Report(title="T", tables=[tbl]))
+    doc = _open(blob)
+    cell_texts = [c.text for tb in doc.tables for row in tb.rows for c in row.cells]
+    assert "xy" in cell_texts
