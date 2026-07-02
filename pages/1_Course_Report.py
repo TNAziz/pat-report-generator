@@ -19,6 +19,7 @@ from Home import (
     cache_signature,
     get_combined_cached,
     render_sidebar,
+    year_range_slider,
 )
 from pat import data
 from pat.analysis import course_report
@@ -57,13 +58,8 @@ def main():
             yr_min, yr_max = year_range
         else:
             yr_min, yr_max = 2020, date.today().year
-        yr_lo, yr_hi = st.slider(
-            "Year range",
-            min_value=int(yr_min),
-            max_value=int(yr_max),
-            value=(int(yr_min), int(yr_max)),
-            step=1,
-            key="cr_year_range",
+        yr_lo, yr_hi = year_range_slider(
+            "Year range", yr_min, yr_max, key="cr_year_range",
         )
 
     # Find which programs actually contain this course before letting the

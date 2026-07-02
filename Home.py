@@ -225,6 +225,43 @@ def cache_signature() -> str:
     return hashlib.sha256(repr(sorted(m.items())).encode("utf-8")).hexdigest()
 
 
+def year_range_slider(
+    label: str, yr_min, yr_max, *, key: str,
+) -> tuple[int, int]:
+    """Render a year-range slider, defending against two crash modes.
+
+    1. Single-year data (``yr_min == yr_max``): ``st.slider`` requires
+       ``min_value < max_value`` strictly. Show a caption instead and
+       return ``(yr_min, yr_min)``.
+    2. Stale ``session_state`` from a wider prior dataset: if the
+       persisted value falls outside the new ``[yr_min, yr_max]`` range,
+       drop it before calling ``st.slider`` so Streamlit doesn't crash
+       with "Slider value X is less than min_value Y".
+    """
+    yr_min, yr_max = int(yr_min), int(yr_max)
+    if yr_min >= yr_max:
+        st.caption(f"{label}: **{yr_min}** (only one year loaded)")
+        return yr_min, yr_min
+    persisted = st.session_state.get(key)
+    if persisted is not None:
+        try:
+            lo, hi = persisted
+            lo, hi = int(lo), int(hi)
+        except (TypeError, ValueError):
+            del st.session_state[key]
+        else:
+            if lo < yr_min or hi > yr_max or lo > hi:
+                del st.session_state[key]
+    return st.slider(
+        label,
+        min_value=yr_min,
+        max_value=yr_max,
+        value=(yr_min, yr_max),
+        step=1,
+        key=key,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Landing page
 # ---------------------------------------------------------------------------

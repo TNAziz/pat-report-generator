@@ -24,6 +24,7 @@ from Home import (
     get_combined_cached,
     get_schedule_cached,
     render_sidebar,
+    year_range_slider,
 )
 from pat import data as data_layer
 from pat.analysis import coverage as coverage_analysis
@@ -58,11 +59,9 @@ def main():
     with col_sem:
         semester = st.selectbox("Focus semester", semesters, key="cc_semester")
     with col_year:
-        yr_lo, yr_hi = st.slider(
+        yr_lo, yr_hi = year_range_slider(
             "Year range (for trend chart and heatmaps)",
-            min_value=int(yr_min), max_value=int(yr_max),
-            value=(int(yr_min), int(yr_max)),
-            step=1, key="cc_year_range",
+            yr_min, yr_max, key="cc_year_range",
         )
 
     # Use the Assessment Schedule to determine the canonical sub-outcome
