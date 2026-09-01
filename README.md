@@ -42,13 +42,21 @@ representation, so content parity is enforced.
 
 ## Quick start
 
+Double-click **`run.bat`** (Windows) or run **`./run.sh`** (macOS, Linux).
+On a machine that has never run this app, the launcher installs the
+packages it needs first — a few minutes, once — and then starts the app.
+Every later run goes straight to the app.
+
+The launcher needs Python 3.10 or newer on the machine; it says so and
+stops if Python is missing. Nothing else is required.
+
+If you would rather do it by hand:
+
 ```powershell
 # From inside the project folder:
 python -m pip install -r requirements.txt
 python -m streamlit run Home.py
 ```
-
-Or double-click `run.bat` (Windows) / `./run.sh` (macOS, Linux).
 
 The app opens in your browser at <http://localhost:8501>. Drag your
 three PAT CSV exports onto the sidebar — they're auto-detected by
@@ -61,10 +69,20 @@ once per semester.
 
 1. Install Python 3.10 or newer from <https://www.python.org/downloads/>.
    Tick **"Add Python to PATH"** in the installer.
-2. Open PowerShell in the project folder (Shift + right-click →
+2. Double-click `run.bat`. The first run installs the packages and then
+   opens the app; later runs just open the app.
+
+Doing it by hand instead:
+
+1. Open PowerShell in the project folder (Shift + right-click →
    "Open PowerShell window here").
-3. `python -m pip install -r requirements.txt`
-4. `python -m streamlit run Home.py` (or double-click `run.bat`).
+2. `python -m pip install -r requirements.txt`
+3. `python -m streamlit run Home.py`
+
+If the WeasyPrint package fails to install (it needs native libraries
+Windows doesn't ship — see **PDF support** below), `run.bat` retries
+without it and carries on. PDF export then uses the headless-browser
+backend, which is what a stock Windows machine uses anyway.
 
 **PDF support.** PDF export has two backends and picks the first one
 that works, so on a stock Windows machine it works out of the box:
@@ -129,15 +147,13 @@ absolute path if your browser lives somewhere unusual.
 ### macOS
 
 ```bash
-python3 -m pip install -r requirements.txt
-./run.sh
+./run.sh          # installs on first run, then starts the app
 ```
 
 ### Linux
 
 ```bash
-python3 -m pip install -r requirements.txt
-./run.sh
+./run.sh          # installs on first run, then starts the app
 ```
 
 ## File uploads
@@ -438,11 +454,11 @@ pat-report-generator/
 │   ├── 04_ui_spec.md
 │   ├── 05_verification.md
 │   └── 06_implementation_plan.md
-├── tests/                        # Pytest suite (>200 tests)
+├── tests/                        # Pytest suite (~340 tests)
 ├── samples/                      # Pre-generated example outputs
 ├── requirements.txt
 ├── pyproject.toml
-├── run.bat / run.sh              # Launchers
+├── run.bat / run.sh              # Launchers (install on first run)
 └── README.md                     # This file
 ```
 
