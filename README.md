@@ -26,6 +26,9 @@ HTML.
   showing which courses claim each sub-outcome.
 - **Assessment Schedule** — the planned-vs-actual overlay for the
   schedule workbook.
+- **PAT Scheduler** — for one program and one semester, the list of
+  courses and sub-outcomes the PAT Admin has to create in the PAT web
+  tool, grouped the way PAT takes them (by program and outcome).
 - **Annual Assessment** — the assessment cycle in the shape of the
   Anthology write-up: program → outcome → sub-outcome, each
   sub-outcome carrying its definition, an aggregate statistics line
@@ -310,6 +313,44 @@ records the instructions it carried.
 > a report you wrote months ago, check the `measurement-result-updated`
 > dates before assuming the report was wrong.
 
+### PAT Scheduler
+
+Answers one question for the PAT administrator: *for this program and
+this semester, what has to be created in the PAT web tool?*
+
+Pick a program (CE, ENE, CON) and a semester; the page defaults to the
+current semester by calendar date. The list is built from the Assessment
+Schedule workbook alone — **no PAT export is consulted**, so it reports
+what the plan calls for, not what has already been entered.
+
+The join is three sheets deep:
+
+1. **`Assessment Schedule`** — the course × semester grid. `X` means the
+   course is scheduled that semester.
+2. **`CourseSubOutcomes`** — the course's `Programs` field decides
+   whether it belongs to the selected program, and its checkmarks give
+   the sub-outcomes to assess. Cross-listed courses appearing on several
+   rows are unioned, so no row's checkmarks are lost.
+3. **`OutcomeDescriptions`** — the text for each sub-outcome code.
+
+Output, in the order the work is done:
+
+- **By sub-outcome** — the working list. One row per sub-outcome, with
+  the courses to add under it, because PAT takes entries per program and
+  outcome. Each course under a sub-outcome is one PAT entry.
+- **Cross-check: by course** — the same data inverted, for confirming
+  nothing was missed.
+- **Needs confirmation** — courses marked `?` rather than `X` in the
+  workbook. They are listed separately and excluded from the totals;
+  confirm with the program coordinator before adding them.
+- **Workbook issues** — courses scheduled but absent from
+  `CourseSubOutcomes` (program and sub-outcomes unknown), and courses
+  scheduled in a term the workbook says they are not offered in.
+
+Same four downloads as the other pages, plus a **checklist CSV** with
+one row per PAT entry (program, semester, outcome, sub-outcome,
+description, course).
+
 ## Troubleshooting
 
 **"streamlit: command not found"**
@@ -365,7 +406,8 @@ pat-report-generator/
 │   ├── 2_Sub_Outcome_Lookup.py
 │   ├── 3_Coverage_Check.py
 │   ├── 4_Assessment_Schedule.py
-│   └── 5_Annual_Assessment.py
+│   ├── 5_Annual_Assessment.py
+│   └── 6_PAT_Scheduler.py
 ├── pat/                          # Domain logic (no Streamlit imports)
 │   ├── normalize.py              # String/DataFrame cleaning
 │   ├── ingest.py                 # CSV + Assessment Schedule readers
@@ -376,6 +418,7 @@ pat-report-generator/
 │   │   ├── suboutcome.py
 │   │   ├── coverage.py
 │   │   ├── annual.py             # Annual Assessment (outcome-shaped)
+│   │   ├── scheduler.py          # PAT Scheduler (what to add to PAT)
 │   │   └── briefing.py           # Home dashboard helpers
 │   ├── render/
 │   │   ├── model.py              # Report intermediate representation

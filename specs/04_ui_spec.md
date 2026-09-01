@@ -195,14 +195,50 @@ Streamlit app, sidebar always visible, three pages in the sidebar nav.
 - **No data loaded:** info banner directing user to sidebar.
 - **No rows for selected semester:** warning "No data for Spring 2025 across any program — was the export complete?"
 
-## 6. Cross-cutting UI rules
+## 6. Page: PAT Scheduler
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  PAT Scheduler                                                               │
+│  ─────────────                                                               │
+│  Program: [ CE -- Civil Engineering ▼ ]   Semester: [ Fall 2026 ▼ ]          │
+│                                                                              │
+│  [ 27 PAT entries ]  [ 7 Courses ]  [ 9 Sub-outcomes ]                       │
+│                                                                              │
+│  Download: [ .md ] [ .docx ] [ .pdf ] [ .html ]  [ Checklist (.csv) ]        │
+│                                                                              │
+│  Courses to add, by sub-outcome                                              │
+│  ┌─────────┬──────────────┬──────────────┬───────────────────────────┬────┐  │
+│  │ Outcome │ Sub-outcome  │ Description  │ Courses                   │ #  │  │
+│  ├─────────┼──────────────┼──────────────┼───────────────────────────┼────┤  │
+│  │ 1       │ 1.1          │ Apply know…  │ CE 225, CE 301, CE 325 …  │ 6  │  │
+│  └─────────┴──────────────┴──────────────┴───────────────────────────┴────┘  │
+│                                                                              │
+│  Cross-check: by course        Needs confirmation (?)      Workbook issues   │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Inputs
+
+- **Program.** CE / ENE / CON, fixed list.
+- **Semester.** Options are the `F##`/`S##` columns of the `Assessment Schedule` sheet, chronologically ordered, labeled "Fall 2026". Defaults to the current semester by calendar date, then the nearest later column, then the last column.
+
+### Empty / error states
+
+- **No Assessment Schedule loaded:** info banner "Upload the Assessment Schedule workbook in the sidebar to use the scheduler."
+- **Workbook has no `Assessment Schedule` sheet:** warning naming the missing sheet and the expected column shape.
+- **Nothing scheduled for the selection:** the report body reads "No courses are scheduled for assessment in Fall 2026 for ENE."
+
+## 7. Cross-cutting UI rules
 
 - Never display a Python traceback. All exceptions in `pat.*` calls are caught at the page level and shown as `st.error("Something went wrong: <one-sentence summary>")` with a `st.expander("Technical details")` containing the traceback for debugging.
 - All download filenames are sanitized: spaces → underscores, no special characters.
 - All dates displayed to the user are in `MMMM D, YYYY` format (e.g., `May 29, 2026`); ISO dates are reserved for filenames.
 - Color usage: green for success state, red for error, gray for empty/disabled. Performance-indicator violations in the Course Report preview are bold (matching the Markdown output) rather than colored, to keep print outputs unambiguous.
 
-## 7. Accessibility
+## 8. Accessibility
 
 - All form widgets have explicit labels.
 - Color is never the only signal — text or icons accompany every color cue.

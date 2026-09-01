@@ -365,7 +365,8 @@ def main():
     st.title("PAT Report Generator")
     st.caption(
         "Briefing across all loaded programs. Use the sidebar to navigate "
-        "to per-course reports, sub-outcome lookups, and the full coverage view."
+        "to per-course reports, sub-outcome lookups, the full coverage view, "
+        "and the PAT Scheduler."
     )
 
     cached = cache.list_cached()
@@ -384,7 +385,10 @@ def main():
             "- **Sub-Outcome Lookup** -- programs and sub-outcomes for a "
             "course (requires the Assessment Schedule workbook).\n"
             "- **Coverage Check** -- missing-data list per semester, "
-            "year-over-year trend, and sub-outcome coverage heatmaps."
+            "year-over-year trend, and sub-outcome coverage heatmaps.\n"
+            "- **PAT Scheduler** -- for a program and semester, the "
+            "courses and sub-outcomes the PAT Admin has to add to the "
+            "PAT web tool (needs only the Assessment Schedule workbook)."
         )
         return
 

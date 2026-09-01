@@ -85,9 +85,25 @@ Each requirement is numbered for traceability to verification tests in `05_verif
 
 **R25.** Coverage results are downloadable in the same four formats as R15.
 
+### PAT Scheduler tool
+
+**R28.** The user can select one program (CE / ENE / CON) and one semester from the Assessment Schedule workbook's planned grid; the semester defaults to the current one by calendar date (January–June = Spring, July–December = Fall).
+
+**R29.** The tool lists, for that program and semester, every course marked as scheduled in the `Assessment Schedule` sheet whose `CourseSubOutcomes` `Programs` field includes the selected program, together with the sub-outcomes that course is assigned.
+
+**R30.** The primary grouping is by sub-outcome — for each sub-outcome, the courses to add — because PAT entries are created per program and outcome. A by-course view is offered as a cross-check. One (course, sub-outcome) pair is one PAT entry.
+
+**R31.** Cells marked `?` rather than `X` are reported in a separate "needs confirmation" list and excluded from the entry totals.
+
+**R32.** The tool flags workbook problems it can detect: a scheduled course absent from `CourseSubOutcomes` (program and sub-outcomes unknown), and a course scheduled in a term its `Offering` field excludes.
+
+**R33.** The tool consults no PAT export. Its answer is what the plan calls for, not what has already been entered in PAT.
+
+**R34.** Results are downloadable in the same four formats as R15, plus a checklist CSV with one row per PAT entry.
+
 ### Cross-cutting
 
-**R26.** All three tools share the data uploaded in the sidebar — the user uploads CSVs once per session.
+**R26.** All tools share the data uploaded in the sidebar — the user uploads CSVs once per session.
 
 **R27.** Each tool gracefully handles the case where required data is missing (e.g., no CSVs uploaded, no Assessment Schedule loaded) by showing a clear message rather than erroring.
 
@@ -122,7 +138,7 @@ Each requirement is numbered for traceability to verification tests in `05_verif
 ## 6. Assumptions
 
 - The PAT raw export schema remains stable enough that column-alias matching can absorb small renames.
-- The Assessment Schedule workbook structure (two named sheets, `Course`/`Programs` plus numeric sub-outcome columns) remains consistent across academic years.
+- The Assessment Schedule workbook structure (two named sheets, `Course`/`Programs` plus numeric sub-outcome columns, and an optional `Assessment Schedule` grid whose columns are `F##`/`S##` semester codes) remains consistent across academic years.
 - Users have Python 3.10 or newer installed.
 
 ## 7. Glossary
