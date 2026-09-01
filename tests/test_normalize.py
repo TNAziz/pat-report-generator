@@ -280,3 +280,20 @@ def test_check_invariants_passes_on_clean_data():
     df = pd.DataFrame([_raw_row()])
     clean = N.clean_dataframe(df, program="CE")
     N.check_invariants(clean)  # should not raise
+
+
+# ---------------------------------------------------------------------------
+# HTML entities in PAT free-text fields
+# ---------------------------------------------------------------------------
+
+def test_clean_string_unescapes_html_entities():
+    """PAT HTML-escapes comments/actions; entities must not reach the report."""
+    assert N.clean_string("a &#039;topic 0&#039; quiz") == "a 'topic 0' quiz"
+    assert N.clean_string("Ratio &gt; 1 &amp; rising") == "Ratio > 1 & rising"
+    assert N.clean_string("students don&#039;t progress") == "students don't progress"
+
+
+def test_clean_string_is_unchanged_on_text_without_entities():
+    assert N.clean_string("  plain text  ") == "plain text"
+    assert N.clean_string("50% & up") == "50% & up"
+    assert N.clean_string(None) == ""

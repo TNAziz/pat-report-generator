@@ -21,6 +21,7 @@ import streamlit as st
 
 from Home import (
     cache_signature,
+    download_row,
     get_combined_cached,
     get_schedule_cached,
     render_sidebar,
@@ -28,10 +29,7 @@ from Home import (
 )
 from pat import data as data_layer
 from pat.analysis import coverage as coverage_analysis
-from pat.render import docx as docx_renderer
 from pat.render import html as html_renderer
-from pat.render import markdown as md_renderer
-from pat.render import pdf as pdf_renderer
 
 
 def _safe(s: str) -> str:
@@ -80,25 +78,7 @@ def main():
 
     # --- Downloads (top of page so they're easy to find) ---
     base = f"coverage_{_safe(semester)}"
-    md_bytes = md_renderer.render(report).encode("utf-8")
-    html_bytes = html_renderer.render(report).encode("utf-8")
-    docx_bytes = docx_renderer.render(report)
-    dl1, dl2, dl3, dl4 = st.columns(4)
-    dl1.download_button("Markdown (.md)", md_bytes, f"{base}.md", "text/markdown",
-                        use_container_width=True)
-    dl2.download_button("Word (.docx)", docx_bytes, f"{base}.docx",
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        use_container_width=True)
-    if pdf_renderer.is_available():
-        pdf_bytes = pdf_renderer.render(report)
-        dl3.download_button("PDF (.pdf)", pdf_bytes, f"{base}.pdf",
-                            "application/pdf", use_container_width=True)
-    else:
-        dl3.button("PDF (.pdf)", disabled=True,
-                   help=pdf_renderer.unavailable_reason(),
-                   use_container_width=True)
-    dl4.download_button("HTML (.html)", html_bytes, f"{base}.html", "text/html",
-                        use_container_width=True)
+    download_row(report, base)
 
     st.divider()
 

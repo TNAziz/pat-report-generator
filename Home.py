@@ -18,6 +18,10 @@ import streamlit as st
 
 from pat import cache, data
 from pat import ingest, normalize as N
+from pat.render import docx as docx_renderer
+from pat.render import html as html_renderer
+from pat.render import markdown as md_renderer
+from pat.render import pdf as pdf_renderer
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -223,6 +227,95 @@ def cache_signature() -> str:
     import hashlib
     m = cache.load_manifest()
     return hashlib.sha256(repr(sorted(m.items())).encode("utf-8")).hexdigest()
+
+
+@st.cache_data(show_spinner=False)
+def _pdf_from_html_cached(html_text: str) -> bytes:
+    """PDF bytes for an HTML document, cached on the HTML itself.
+
+    Keyed on the HTML string, so re-rendering the same report -- a rerun
+    triggered by an unrelated widget, say -- costs nothing.
+    """
+    return pdf_renderer.render_html(html_text)
+
+
+def download_row(report, stem: str) -> None:
+    """Render the four-format download row for a report.
+
+    Markdown, HTML and Word are built on every rerun: they are pure
+    in-process string and zip building, cheap enough not to matter.
+
+    **PDF is not built until asked for.** It either loads WeasyPrint's
+    native stack or launches a headless browser, and Streamlit reruns the
+    whole page on every widget change, so building it eagerly meant a
+    browser process spawning each time a filter moved -- and any failure
+    in it taking down the page with a traceback. The button therefore
+    builds on click, then turns into the download.
+
+    ``stem`` is the download filename stem and also scopes the "built"
+    flag, so changing a filter resets the button rather than offering a
+    download of the previous selection.
+    """
+    md_bytes = md_renderer.render(report).encode("utf-8")
+    html_text = html_renderer.render(report)
+    docx_bytes = docx_renderer.render(report)
+
+    dl1, dl2, dl3, dl4 = st.columns(4)
+    dl1.download_button(
+        "Markdown (.md)", md_bytes, f"{stem}.md", "text/markdown",
+        use_container_width=True,
+    )
+    dl2.download_button(
+        "Word (.docx)", docx_bytes, f"{stem}.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        use_container_width=True,
+    )
+    _pdf_button(dl3, html_text, stem)
+    dl4.download_button(
+        "HTML (.html)", html_text.encode("utf-8"), f"{stem}.html", "text/html",
+        use_container_width=True,
+    )
+
+
+def _pdf_button(column, html_text: str, stem: str) -> None:
+    """The PDF third of the download row: build on click, then download."""
+    if not pdf_renderer.is_available():
+        column.button(
+            "PDF (.pdf)", disabled=True,
+            help=pdf_renderer.unavailable_reason(),
+            use_container_width=True,
+        )
+        return
+
+    flag = f"pdf_requested_{stem}"
+    if not st.session_state.get(flag):
+        column.button(
+            "Build PDF", key=f"build_{flag}",
+            help=f"Renders with {pdf_renderer.backend_label()} when you click.",
+            use_container_width=True,
+            on_click=lambda: st.session_state.__setitem__(flag, True),
+        )
+        return
+
+    try:
+        with st.spinner("Building PDF…"):
+            pdf_bytes = _pdf_from_html_cached(html_text)
+    except pdf_renderer.PDFUnavailable as exc:
+        # Never let a PDF failure take the page down; the other three
+        # formats are still perfectly usable.
+        st.session_state[flag] = False
+        column.button(
+            "PDF (.pdf)", disabled=True, help=str(exc),
+            key=f"failed_{flag}", use_container_width=True,
+        )
+        st.warning(f"PDF export failed: {exc}")
+        return
+
+    column.download_button(
+        "PDF (.pdf)", pdf_bytes, f"{stem}.pdf", "application/pdf",
+        use_container_width=True,
+        help=f"Rendered with {pdf_renderer.backend_label()}.",
+    )
 
 
 def year_range_slider(

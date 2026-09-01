@@ -186,8 +186,23 @@ def _add_inline_runs(paragraph, text: str):
 
 def _add_narrative(doc, block: NarrativeBlock):
     if block.heading:
-        doc.add_heading(block.heading, level=2)
+        level = max(1, min(9, getattr(block, "level", 2)))
+        doc.add_heading(block.heading, level=level)
     _add_markdown_paragraph(doc, block.body_markdown)
+
+
+def _add_body_item(doc, item):
+    """Add one ordered ``Report.body`` item by type."""
+    if isinstance(item, NarrativeBlock):
+        _add_narrative(doc, item)
+    elif isinstance(item, NamedTable):
+        _add_named_table(doc, item)
+    elif isinstance(item, Chart):
+        _add_chart(doc, item)
+    elif isinstance(item, Heatmap):
+        _add_heatmap(doc, item)
+    else:
+        raise TypeError(f"unsupported Report.body item: {type(item).__name__}")
 
 
 def _add_chart(doc, chart: Chart):
@@ -336,6 +351,8 @@ def render(report: Report) -> bytes:
 
     for section in report.sections:
         _add_program_section(doc, section)
+    for item in report.body:
+        _add_body_item(doc, item)
     for block in report.narrative:
         _add_narrative(doc, block)
     for table in report.tables:

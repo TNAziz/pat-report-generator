@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
-from typing import List, Optional
+from typing import List, Optional, Union
 
 
 # ---------------------------------------------------------------------------
@@ -92,9 +92,14 @@ class NarrativeBlock:
     Used for the Sub-Outcome Lookup tool's bulleted output and as the
     container for future LLM-generated narrative text. Body is markdown;
     each renderer is responsible for converting it to its format.
+
+    ``level`` is the heading level for ``heading`` (2 = H2, the default,
+    matching every pre-existing caller). Reports that nest content --
+    outcome above sub-outcome, say -- set it explicitly.
     """
     heading: Optional[str]
     body_markdown: str
+    level: int = 2
 
 
 # ---------------------------------------------------------------------------
@@ -178,6 +183,19 @@ class Heatmap:
 
 
 # ---------------------------------------------------------------------------
+# Ordered body content
+# ---------------------------------------------------------------------------
+
+#: One item in :attr:`Report.body`. The legacy ``tables`` / ``narrative`` /
+#: ``charts`` / ``heatmaps`` lists each render as a group, in that fixed
+#: order, which is fine for a report that is "some prose, then some
+#: tables". A report that interleaves them -- a heading, its stats
+#: paragraph, its table, the next heading -- cannot be expressed that way,
+#: so it populates ``body`` instead and gets exactly the order it built.
+BodyItem = Union[NarrativeBlock, NamedTable, Chart, Heatmap]
+
+
+# ---------------------------------------------------------------------------
 # Top-level Report
 # ---------------------------------------------------------------------------
 
@@ -199,7 +217,8 @@ class Report:
     narrative: List[NarrativeBlock] = field(default_factory=list)
     charts: List[Chart] = field(default_factory=list)
     heatmaps: List[Heatmap] = field(default_factory=list)
+    body: List[BodyItem] = field(default_factory=list)
 
     def is_empty(self) -> bool:
         return not (self.sections or self.tables or self.narrative
-                    or self.charts or self.heatmaps)
+                    or self.charts or self.heatmaps or self.body)

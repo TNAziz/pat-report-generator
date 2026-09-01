@@ -17,3 +17,8 @@ _app.py.bak
 PAT DATA/
 # Session-to-session handoff notes; local scratch only.
 HANDOFF.md
+# Untracked working data and transfer artifacts, none of it source.
+Fall2026/
+_to_delete/
+_transfer_pat-repo.tar.gz
+.claude/

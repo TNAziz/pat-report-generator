@@ -24,6 +24,14 @@ HTML.
   coverage heatmaps per program, an ABET cycle rollup heatmap
   (default Fall 2023 → Spring 2028), and a sub-outcome detail panel
   showing which courses claim each sub-outcome.
+- **Assessment Schedule** — the planned-vs-actual overlay for the
+  schedule workbook.
+- **Annual Assessment** — the assessment cycle in the shape of the
+  Anthology write-up: program → outcome → sub-outcome, each
+  sub-outcome carrying its definition, an aggregate statistics line
+  (courses, measures, N, weighted % meeting threshold), every
+  underlying measurement row, and an Actions Taken roll-up per
+  outcome.
 
 Every page produces downloads in **Markdown / Word / PDF / HTML** —
 all four formats are generated from the same typed intermediate
@@ -55,18 +63,65 @@ once per semester.
 3. `python -m pip install -r requirements.txt`
 4. `python -m streamlit run Home.py` (or double-click `run.bat`).
 
-**PDF support (optional).** The PDF download uses WeasyPrint, which
-needs the GTK runtime on Windows. Without GTK, the PDF button is
-disabled and tooltipped with the reason; the other three formats
-work fine. To enable PDF:
+**PDF support.** PDF export has two backends and picks the first one
+that works, so on a stock Windows machine it works out of the box:
 
-```powershell
-winget install --id GTK.Runtime
-```
+1. **WeasyPrint** — preferred, highest fidelity, but needs native
+   GTK/Pango libraries that Windows doesn't ship.
+2. **Headless browser** — fallback. Prints the same HTML with
+   Microsoft Edge, Google Chrome, or Chromium via `--print-to-pdf`.
+   Edge is part of Windows, so this needs no installation and no
+   admin rights.
 
-Then restart your terminal and re-launch the app. (No GTK is needed
-on macOS or Linux — WeasyPrint's pip wheel bundles its native deps
-there.)
+PDF is built **only when you click** the "Build PDF" button, which then
+turns into the download. Streamlit reruns the whole page on every widget
+change, so building it eagerly meant launching a browser process each
+time a filter moved. Markdown, Word and HTML are cheap enough to build
+on every rerun and stay as direct downloads.
+
+The PDF button's tooltip names the backend actually in use. It is only
+disabled if neither is available (no GTK *and* no Chromium-family
+browser installed), and a PDF failure surfaces as a warning rather than
+taking the page down.
+
+`PAT_PDF_TIMEOUT` (seconds, default 120) bounds a stuck browser. The
+wait normally ends as soon as the PDF file is complete: Edge and Chrome
+on Windows leave helper processes running after printing, so waiting on
+process exit — or on its output pipes — can hang long after the file is
+on disk.
+
+*Optional — enabling the WeasyPrint backend on Windows.* WeasyPrint
+needs Pango ≥ 1.44, which the project installs through MSYS2 (this is
+the route WeasyPrint's own docs recommend; the older
+`winget install GTK.Runtime` package ships a Pango too old for
+WeasyPrint 53+):
+
+1. Install MSYS2 from <https://www.msys2.org/>, keeping the default
+   options.
+2. In the MSYS2 shell that opens, run:
+
+   ```bash
+   pacman -S mingw-w64-x86_64-pango
+   ```
+
+3. Close the MSYS2 shell. Add `C:\msys64\mingw64\bin` to your `PATH`
+   if WeasyPrint still doesn't load (Settings → "Edit the system
+   environment variables" → Environment Variables → Path → New).
+4. Open a fresh terminal and verify:
+
+   ```powershell
+   python -m weasyprint --info
+   ```
+
+   That printing a version means the backend is live; re-launch the app
+   and the PDF tooltip should read "Rendered with WeasyPrint".
+
+No GTK is needed on macOS or Linux — WeasyPrint's pip wheel bundles its
+native deps there.
+
+*Forcing a backend.* Set `PAT_PDF_BACKEND` to `weasyprint` or `browser`
+to pin the choice (`auto` is the default), and `PAT_PDF_BROWSER` to an
+absolute path if your browser lives somewhere unusual.
 
 ### macOS
 
@@ -158,8 +213,8 @@ programs. The report shows:
 - A per-semester detailed section with instructor, measure
   description, n, comments, and actions taken.
 
-Four download buttons. The PDF button is disabled (with a tooltip)
-if WeasyPrint can't load its native dependencies.
+Four download buttons. The PDF button is only disabled (with a
+tooltip) if neither PDF backend is available on the machine.
 
 ### Sub-Outcome Lookup
 
@@ -188,6 +243,73 @@ and the per-program coverage heatmaps. The page shows:
   sub-outcomes, columns = years in the selected range, cells =
   measurement counts. The same pink "not assessed" highlight applies.
 
+### Annual Assessment
+
+Pick the programs, the semesters that make up the assessment cycle
+(e.g. Fall 2024 + Spring 2025), and the outcomes. The report is
+organized the way the Anthology submission is:
+
+- **Program → Outcome → Sub-outcome.** Each outcome opens with the
+  definitions of the sub-outcomes assessed in the cycle, read from the
+  Assessment Schedule's `OutcomeDescriptions` sheet.
+- **A statistics line per sub-outcome** — courses contributing,
+  measures, total student assessments (N), and the weighted percentage
+  meeting the instructor-defined threshold. That percentage is
+  `sum(scores meeting threshold) / sum(total scores)`, *not* the mean
+  of the per-measure percentages, so a 1-student measure doesn't
+  outweigh a 77-student one. Measures with no student counts are
+  excluded from the average and the exclusion is stated inline.
+- **Every underlying measurement** — course, semester, instructor, the
+  instructor's **goal** for that measure, performance, N, the faculty
+  comment, and the corrective action. Nothing is aggregated away, so any
+  number quoted in the narrative can be traced to a course and semester.
+  The goal matters because the department sets no universal benchmark:
+  CE alone used 50 %, 60 %, 70 %, 75 %, 80 %, 90 % and 100 % across the
+  F24/S25 cycle, so 55 % can be a pass and 74 % a miss. A footnote under
+  each table says so.
+- **An Actions Taken roll-up per outcome** — every recorded corrective
+  action grouped by course (identical text across semesters collapses
+  to one entry listing each context), followed by an explicit list of
+  measures where no action was recorded.
+
+Same four downloads as the other pages, plus a **drafting packet**.
+
+The packet is one Markdown file that is both the prompt for an LLM and
+the archival record of what that LLM was given:
+
+1. the task,
+2. the house style and required section structure, distilled from
+   previous Anthology submissions,
+3. the rules for using the data — Section 5 is the only source of
+   facts, use the weighted percentages as given rather than averaging
+   the per-row values, never invent a corrective action where the data
+   says `None recorded`,
+4. provenance — the selection, every source export with its upload time
+   and SHA-256, the row counts, the newest measurement-update date, and
+   a SHA-256 fingerprint of the data section, and
+5. the data, in a fuller column set than the on-screen table: measure
+   description, the measure's own threshold and scale ("11 of 16
+   points"), the instructor's goal, and students meeting threshold over
+   students assessed ("28 of 57"). Those are the fields the narrative's
+   per-course sentences are built from; they are left out of the
+   readable table because they make a printed one unreadable
+   (`annual.build(..., detail=True)`).
+
+Paste it into an assistant to draft the narrative; keep the file next to
+the draft. The fingerprint is what lets you answer, months later,
+whether a given draft was written from the data you are now looking at.
+Nothing in the app calls an LLM API — no keys, no network.
+
+Edit `STYLE`, `TASK`, or `RULES` in `pat/llm.py` to change what the
+packet asks for; the text travels inside the packet, so each packet
+records the instructions it carried.
+
+> **Reproducing a report written earlier.** PAT lets faculty submit
+> measurements long after a semester closes, so a cycle can gain rows
+> after its report was filed. If today's export shows more courses than
+> a report you wrote months ago, check the `measurement-result-updated`
+> dates before assuming the report was wrong.
+
 ## Troubleshooting
 
 **"streamlit: command not found"**
@@ -203,9 +325,19 @@ into the wrong one. Run with the explicit interpreter, e.g.:
 & 'C:\Program Files\Python313\python.exe' -m streamlit run Home.py
 ```
 
-**PDF button is disabled / "WeasyPrint failed to load"**
-Install the GTK runtime (see "Installation per OS → Windows"). The
-other three formats still work without GTK.
+**PDF button is disabled**
+Neither PDF backend could start: WeasyPrint's native libraries are
+missing *and* no Chromium-family browser was found. Installing
+Microsoft Edge or Google Chrome is the quickest fix; the tooltip on the
+disabled button states what was tried. See "Installation per OS →
+Windows → PDF support" for the WeasyPrint route. The Markdown, Word,
+and HTML downloads work regardless.
+
+**PDF comes out looking slightly different than it used to**
+You are probably on the headless-browser fallback rather than
+WeasyPrint — hover the PDF button to see which backend rendered it.
+Page breaks and font metrics differ a little between the two. Install
+Pango (see above) to get the WeasyPrint output back.
 
 **"Could not determine program for the uploaded CSV"**
 Rename the file so it contains `CE`, `CON`, or `ENE` as a word
@@ -231,7 +363,9 @@ pat-report-generator/
 ├── pages/
 │   ├── 1_Course_Report.py
 │   ├── 2_Sub_Outcome_Lookup.py
-│   └── 3_Coverage_Check.py
+│   ├── 3_Coverage_Check.py
+│   ├── 4_Assessment_Schedule.py
+│   └── 5_Annual_Assessment.py
 ├── pat/                          # Domain logic (no Streamlit imports)
 │   ├── normalize.py              # String/DataFrame cleaning
 │   ├── ingest.py                 # CSV + Assessment Schedule readers
@@ -241,6 +375,7 @@ pat-report-generator/
 │   │   ├── course_report.py
 │   │   ├── suboutcome.py
 │   │   ├── coverage.py
+│   │   ├── annual.py             # Annual Assessment (outcome-shaped)
 │   │   └── briefing.py           # Home dashboard helpers
 │   ├── render/
 │   │   ├── model.py              # Report intermediate representation
@@ -249,7 +384,7 @@ pat-report-generator/
 │   │   ├── docx.py
 │   │   └── pdf.py
 │   ├── viz.py                    # Future-extension stub
-│   └── llm.py                    # Future-extension stub
+│   └── llm.py                    # LLM drafting packet (offline)
 ├── scripts/
 │   └── check_imports.py          # Architectural lint
 ├── specs/                        # Design documents (read these first
@@ -316,10 +451,11 @@ python -m tests.capture_notebook_baseline
 - **Data viz beyond what's in the app** — `pat/viz.py` is a
   documented stub; that's the home for matplotlib/altair helpers
   shared across pages.
-- **LLM-assisted annual reports** — `pat/llm.py` is a stub; that's
-  the seam for an Anthropic API integration that turns a filtered
-  `Report` into a narrative paragraph for the annual-report writeup.
-  Don't commit API keys; read from environment.
+- **LLM-assisted annual reports** — `pat/llm.py` builds the drafting
+  packet (see "Annual Assessment" above). It is deliberately offline:
+  it assembles prompt + data + provenance into one Markdown file and
+  stops there. If you later add a direct API call, keep it in this
+  module, read the key from the environment, and never commit it.
 
 ## Specifications
 

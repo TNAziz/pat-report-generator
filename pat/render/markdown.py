@@ -148,7 +148,8 @@ def _render_named_table(t: NamedTable) -> str:
 def _render_narrative(block: NarrativeBlock) -> str:
     lines = []
     if block.heading:
-        lines.append(f"## {block.heading}")
+        level = max(1, min(6, getattr(block, "level", 2)))
+        lines.append(f"{'#' * level} {block.heading}")
         lines.append("")
     lines.append(block.body_markdown)
     lines.append("")
@@ -219,6 +220,19 @@ def _render_heatmap_textual(h: Heatmap) -> str:
         lines.append("")
     return "\n".join(lines)
 
+def _render_body_item(item) -> str:
+    """Render one ordered ``Report.body`` item by type."""
+    if isinstance(item, NarrativeBlock):
+        return _render_narrative(item)
+    if isinstance(item, NamedTable):
+        return _render_named_table(item)
+    if isinstance(item, Chart):
+        return _render_chart_textual(item)
+    if isinstance(item, Heatmap):
+        return _render_heatmap_textual(item)
+    raise TypeError(f"unsupported Report.body item: {type(item).__name__}")
+
+
 def render(report: Report) -> str:
     """Render a Report to a single Markdown string.
 
@@ -235,6 +249,8 @@ def render(report: Report) -> str:
         parts.append("")
     for section in report.sections:
         parts.append(_render_program_section(section))
+    for item in report.body:
+        parts.append(_render_body_item(item))
     for block in report.narrative:
         parts.append(_render_narrative(block))
     for table in report.tables:

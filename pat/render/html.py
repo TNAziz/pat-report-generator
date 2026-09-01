@@ -155,7 +155,8 @@ def _render_named_table_html(t: NamedTable) -> str:
 def _render_narrative_html(block: NarrativeBlock) -> str:
     parts = []
     if block.heading:
-        parts.append(f"<h2>{_e(block.heading)}</h2>")
+        level = max(1, min(6, getattr(block, "level", 2)))
+        parts.append(f"<h{level}>{_e(block.heading)}</h{level}>")
     # Body is markdown; convert to HTML via the markdown library.
     parts.append(md_lib.markdown(block.body_markdown, extensions=["tables"]))
     return "".join(parts)
@@ -363,6 +364,19 @@ def _render_heatmap_html(h: Heatmap) -> str:
     return "".join(parts)
 
 
+def _render_body_item_html(item) -> str:
+    """Render one ordered ``Report.body`` item by type."""
+    if isinstance(item, NarrativeBlock):
+        return _render_narrative_html(item)
+    if isinstance(item, NamedTable):
+        return _render_named_table_html(item)
+    if isinstance(item, Chart):
+        return _render_chart_html(item)
+    if isinstance(item, Heatmap):
+        return _render_heatmap_html(item)
+    raise TypeError(f"unsupported Report.body item: {type(item).__name__}")
+
+
 def render_body(report: Report) -> str:
     """Render the inner HTML for the report (no <html>/<head>/<body> wrapper)."""
     parts = [f"<h1>{_e(report.title)}</h1>"]
@@ -375,6 +389,8 @@ def render_body(report: Report) -> str:
         )
     for section in report.sections:
         parts.append(_render_program_section_html(section))
+    for item in report.body:
+        parts.append(_render_body_item_html(item))
     for block in report.narrative:
         parts.append(_render_narrative_html(block))
     for table in report.tables:

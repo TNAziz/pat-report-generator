@@ -13,6 +13,7 @@ underscores. See specs/03_data_model.md for the full canonical schema.
 
 from __future__ import annotations
 
+import html
 import re
 from datetime import date, datetime
 from typing import Optional
@@ -111,10 +112,24 @@ def is_nullish(value) -> bool:
 
 
 def clean_string(value) -> str:
-    """Strip whitespace and collapse null sentinels to empty string."""
+    """Strip whitespace, collapse null sentinels, and undo HTML escaping.
+
+    PAT's CSV export HTML-escapes free-text fields, so an apostrophe
+    arrives as ``&#039;`` and an ampersand as ``&amp;``. Left alone those
+    entities travel all the way into the generated Word/PDF report,
+    where they read as corruption. ``html.unescape`` is idempotent on
+    text that has no entities.
+
+    Examples
+    --------
+    >>> clean_string("  a &#039;topic 0&#039; quiz  ")
+    "a 'topic 0' quiz"
+    >>> clean_string("Ratio &gt; 1 &amp; rising")
+    'Ratio > 1 & rising'
+    """
     if is_nullish(value):
         return ""
-    return str(value).strip()
+    return html.unescape(str(value)).strip()
 
 
 def clean_course_code(value) -> str:
